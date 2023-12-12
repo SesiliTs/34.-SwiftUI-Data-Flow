@@ -7,38 +7,18 @@
 
 import SwiftUI
 
-class Product: ObservableObject, Identifiable {
+struct Product: Identifiable {
     var id = UUID()
     let name: String
     let price: Double
-    let stock: Int
-    let image: Image
+    var stock: Int
+    var image: Image
     var chosenQuantity: Int
-    
-    init(id: UUID = UUID(), name: String, price: Double, stock: Int, image: Image, chosenQuantity: Int) {
-        self.id = id
-        self.name = name
-        self.price = price
-        self.stock = stock
-        self.image = image
-        self.chosenQuantity = chosenQuantity
-    }
-    
 }
 
 struct ShopView: View {
     
     @StateObject private var viewModel = ShopViewModel()
-    
-    private let products = [
-        Product(name: "Pasta", price: 4.99, stock: 15, image: Image("Pasta"), chosenQuantity: 0),
-        Product(name: "Pesto Sauce", price: 7.50, stock: 7, image: Image("Pesto"), chosenQuantity: 0),
-        Product(name: "Garlic", price: 2.50, stock: 10, image: Image("Garlic"), chosenQuantity: 0),
-        Product(name: "Sourdough Bread", price: 1.80, stock: 13, image: Image("Bread"), chosenQuantity: 0),
-        Product(name: "Peanut Butter", price: 12.30, stock: 10, image: Image("Peanut"), chosenQuantity: 0),
-        Product(name: "Carrots", price: 2.90, stock: 21, image: Image("Carrot"), chosenQuantity: 0),
-        Product(name: "Parmesan Cheese", price: 25.50, stock: 7, image: Image("Parm"), chosenQuantity: 0)
-    ]
     
     var body: some View {
         
@@ -53,12 +33,14 @@ struct ShopView: View {
                     .padding(.vertical, 30)
                 
                 ScrollView {
-                    ForEach(products) { product in
+                    ForEach(viewModel.cartProducts.indices, id: \.self) { index in
+                        let product = viewModel.cartProducts[index]
+                        
                         HStack {
                             product.image
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 100, height: 80)
+                                .frame(width: 80, height: 80)
                                 .clipped()
                                 .padding(.all, 10)
                             
@@ -80,34 +62,44 @@ struct ShopView: View {
                             
                             Spacer()
                             
-                            HStack {
+                            VStack(alignment: .trailing, spacing: 10) {
+                                HStack() {
+                                    Button(action: {
+                                        viewModel.removeFromCart(productID: product.id)
+                                    }) {
+                                        Image(systemName: "minus")
+                                            .foregroundStyle(Color.init(hex: "#d95453"))
+                                    }
+                                    .buttonStyle(BorderedButtonStyle())
+                                    .tint(.white)
+                                    
+                                    Text("\(product.chosenQuantity)")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(Color.black)
+                                    
+                                    Button(action: {
+                                        viewModel.addToCart(productID: product.id)
+                                    }) {
+                                        Image(systemName: "plus")
+                                            .foregroundStyle(Color.init(hex: "#d95453"))
+                                    }
+                                    .alert(isPresented: $viewModel.showAlert) {
+                                        Alert(title: Text("out of Stock"), message: Text("Product is out of stock"), dismissButton: .default(Text("OK")))
+                                    }
+                                    .buttonStyle(BorderedButtonStyle())
+                                    .tint(.white)
+                                }
+                                
                                 Button(action: {
-                                    viewModel.removeFromCart(product: product)
+                                    viewModel.removeProductFromCart(productID: product.id)
                                     
                                 }) {
-                                    Image(systemName: "minus")
+                                    Image(systemName: "trash")
                                         .foregroundStyle(Color.init(hex: "#d95453"))
                                 }
-                                .buttonStyle(.plain)
-                                .contentShape(Rectangle())
-                                
-                                Text("\(product.chosenQuantity)")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(Color.black)
-                                
-                                Button(action: {
-                                    viewModel.addToCart(product: product)
-                                }) {
-                                    Image(systemName: "plus")
-                                        .foregroundStyle(Color.init(hex: "#d95453"))
-                                }                                .buttonStyle(.plain)
-                                    .contentShape(Rectangle())
-                                
-                                
-                                
-                                
+                                .buttonStyle(BorderedButtonStyle())
+                                .tint(.white)
                             }
-                            .padding(.trailing, 15)
                         }
                         .background(.white)
                         .frame(height: 100)
@@ -115,7 +107,7 @@ struct ShopView: View {
                     }
                 }
                 
-                FooterView()
+                FooterView(cartQuantity: viewModel.totalCartQuantity, totalPrice: viewModel.totalCartPrice)
             }
             .padding(.horizontal, 20)
             
@@ -124,17 +116,20 @@ struct ShopView: View {
 }
 
 struct FooterView: View {
+    let cartQuantity: Int
+    let totalPrice: Double
+    
     var body: some View {
         HStack() {
             Image(systemName: "cart")
                 .resizable()
                 .foregroundStyle(.white)
                 .frame(width: 20, height: 20)
-            Text(":  7")
+            Text(":  \(cartQuantity)")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.white)
             Spacer()
-            Text("290 $")
+            Text(String(format: "%.2f $", totalPrice))
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.white)
         }
